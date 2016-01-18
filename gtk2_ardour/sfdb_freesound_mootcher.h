@@ -72,7 +72,7 @@ enum sortMethod {
 class Mootcher: public sigc::trackable, public PBD::ScopedConnectionList
 {
 public:
-	Mootcher();
+	Mootcher(const std::string &api_key = "");
 	~Mootcher();
 
 	bool checkAudioFile(std::string originalFileName, std::string ID);
@@ -123,6 +123,7 @@ private:
 
 	std::string basePath;
 	std::string xmlLocation;
+	std::string api_key;
 };
 
 #endif // __gtk_ardour_sfdb_freesound_mootcher_h__
