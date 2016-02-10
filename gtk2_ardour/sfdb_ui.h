@@ -204,6 +204,7 @@ public:
 	Gtk::ComboBoxText freesound_sort;
 
 	Gtk::Button freesound_search_btn;
+	Gtk::Entry  freesound_token_entry;
 	Gtk::TreeView freesound_list_view;
 	Gtk::Notebook notebook;
 

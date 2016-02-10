@@ -95,8 +95,10 @@ public:
 private:
 	void ensureWorkingDir ();
 
-	std::string doRequest (std::string uri, std::string params);
-	void setcUrlOptions ();
+	bool            oauth(const std::string &username, const std::string &password);
+
+	std::string doRequest(std::string uri, std::string params);
+	void setcUrlOptions();
 
 	static size_t WriteMemoryCallback (void *ptr, size_t size, size_t nmemb, void *data);
 	static int progress_callback (void *clientp, double dltotal, double dlnow, double ultotal, double ulnow);
