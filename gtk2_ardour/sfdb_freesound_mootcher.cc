@@ -303,8 +303,6 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 		DEBUG_TRACE(PBD::DEBUG::Freesound, "oauth_page page has no doc.root!\n");
 		return false;
 	}
-
-	// oauth_page->dump(std::cerr, "oauth_page:");
 	if (strcasecmp (doc.root()->name().c_str(), "html")) {
 		DEBUG_TRACE(PBD::DEBUG::Freesound, "root is not <html>\n");
 		return false;
@@ -371,7 +369,11 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	xml_page.size = 0;
 
 	DEBUG_TRACE(PBD::DEBUG::Freesound, oauth_page_str);
-	doc.read_buffer (oauth_page_str.c_str());
+#if FREESOUND_SENDS_VALID_XML
+	if (!doc.read_buffer (oauth_page_str.c_str())) {
+		DEBUG_TRACE(PBD::DEBUG::Freesound, "doc.read_buffer() returns false\n");
+		return false;
+	}
 	XMLNode *authorize_page = doc.root();
 	if (!authorize_page) {
 		DEBUG_TRACE(PBD::DEBUG::Freesound, "authorize page has no doc.root!\n");
@@ -409,6 +411,11 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 		return false;
 	}
 
+#else
+	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, ("csrfmiddlewaretoken=" + csrf_mwt + "&authorize=Authorize%21").c_str());
+
+#endif
+
 	curl_easy_setopt(curl, CURLOPT_POST, 2);
 
 	/* POST the "Authorize!" form */
@@ -429,7 +436,10 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	xml_page.size = 0;
 
 	DEBUG_TRACE(PBD::DEBUG::Freesound, oauth_page_str);
-	doc.read_buffer (oauth_page_str.c_str());
+	if (!doc.read_buffer (oauth_page_str.c_str())) {
+		DEBUG_TRACE(PBD::DEBUG::Freesound, "doc.read_buffer() of token page returns false\n");
+		return false;
+	}
 	XMLNode *auth_granted_page = doc.root();
 	if (!auth_granted_page) {
 		DEBUG_TRACE(PBD::DEBUG::Freesound, "auth_granted_page has no doc.root!\n");
