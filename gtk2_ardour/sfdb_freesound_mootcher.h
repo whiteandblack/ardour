@@ -126,6 +126,7 @@ private:
 	std::string basePath;
 	std::string xmlLocation;
 	std::string token;
+	bool logged_in;
 };
 
 #endif // __gtk_ardour_sfdb_freesound_mootcher_h__
