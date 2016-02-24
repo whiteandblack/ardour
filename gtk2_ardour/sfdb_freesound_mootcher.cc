@@ -333,7 +333,9 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 
 	res = curl_easy_perform(curl);
 	if (res != CURLE_OK) {
-		report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
+		if (res != CURLE_ABORTED_BY_CALLBACK) {
+			report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
+		}
 		return false;
 	}
 	if (!xml_page.memory) {
@@ -412,7 +414,9 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 
 	res = curl_easy_perform (curl);
 	if (res != CURLE_OK) {
-		report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
+		if (res != CURLE_ABORTED_BY_CALLBACK) {
+			report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
+		}
 		return false;
 	}
 
@@ -485,7 +489,9 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 
 	res = curl_easy_perform (curl);
 	if (res != CURLE_OK) {
-		report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
+		if (res != CURLE_ABORTED_BY_CALLBACK) {
+			report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
+		}
 		return false;
 	}
 
@@ -587,7 +593,9 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 
 	res = curl_easy_perform (curl);
 	if (res != CURLE_OK) {
-		report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
+		if (res != CURLE_ABORTED_BY_CALLBACK) {
+			report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
+		}
 		return false;
 	}
 
