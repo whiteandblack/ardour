@@ -1109,6 +1109,10 @@ SoundFileBrowser::freesound_list_view_selected ()
 					chooser.set_filename (file);
 					preview.setup_labels (file);
 					set_action_sensitive (true);
+				} else {
+					// file doesn't exist yet, maybe still downloading:
+					// disable preview
+					preview.setup_labels ("");
 				}
 				freesound_similar_btn.set_sensitive (true);
 				break;
