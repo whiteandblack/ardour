@@ -704,7 +704,6 @@ SoundFileBrowser::SoundFileBrowser (string title, ARDOUR::Session* s, bool persi
 	VBox* vbox;
 	HBox* hbox;
 
-
 	hbox = manage(new HBox);
 	hbox->pack_start (found_entry);
 	hbox->pack_start (found_search_btn);
@@ -1071,6 +1070,7 @@ SoundFileBrowser::freesound_get_audio_file(Gtk::TreeIter iter)
 		(*iter)[freesound_list_columns.started] = false;
 		return file;
 	}
+
 	if (!(*iter)[freesound_list_columns.started]) {
 		// start downloading the sound file
 		(*iter)[freesound_list_columns.started] = true;
@@ -1080,6 +1080,7 @@ SoundFileBrowser::freesound_get_audio_file(Gtk::TreeIter iter)
 			(*iter)[freesound_list_columns.started] = false;
 		}
 	}
+
 	return "";
 }
 
@@ -1521,8 +1522,6 @@ SoundFileOmega::reset_options ()
 	set_popdown_strings (action_combo, action_strings);
 
 	/* preserve any existing choice, if possible */
-
-
 	if (existing_choice.length()) {
 		vector<string>::iterator x;
 		for (x = action_strings.begin(); x != action_strings.end(); ++x) {

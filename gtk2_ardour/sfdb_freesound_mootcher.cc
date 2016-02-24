@@ -178,8 +178,6 @@ void Mootcher::setcUrlOptions()
 	// Allow connections to time out (without using signals)
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);
-
-
 }
 
 std::string Mootcher::doRequest(std::string uri, std::string params)
@@ -273,7 +271,7 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	 * value of the 'authorize' button. Ideally, we'd parse out the <input ...> field of the
 	 * 'Authorize!' button and POST the value therein; unfortunately the page isn't valid
 	 * XHTML, so we can't use XMLTree on it. For now, I don't even attempt to parse the page:
-	 *  I've assumed that the button is always named 'authorize', with a value of 'Authorize!'.
+	 * I've assumed that the button is always named 'authorize', with a value of 'Authorize!'.
 	 *
 	 * The returned page then contains an authorization code, which we have to exchange for a token,
 	 * by POSTing to https://www.freesound.org/apiv2/oauth2/access_token/. This page expects
