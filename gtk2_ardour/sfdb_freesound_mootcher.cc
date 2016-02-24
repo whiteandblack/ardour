@@ -242,6 +242,14 @@ std::string Mootcher::searchSimilar(std::string id)
 
 //------------------------------------------------------------------------
 
+void
+Mootcher::report_login_error(const std::string &msg)
+{
+	DEBUG_TRACE(PBD::DEBUG::Freesound, "Login failed:" + msg + "\n");
+	error << "Freesound login failed: " << msg << endmsg;
+}
+
+
 bool
 Mootcher::oauth(const std::string &username, const std::string &password)
 {
@@ -325,11 +333,11 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 
 	res = curl_easy_perform(curl);
 	if (res != CURLE_OK) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, string_compose("curl failed: %1, error=%2\n", oauth_url, res));
+		report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
 		return false;
 	}
 	if (!xml_page.memory) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "curl returned nothing!\n");
+		report_login_error (string_compose ("curl returned nothing, url=%1!", oauth_url));
 		return false;
 	}
 
@@ -342,11 +350,11 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	doc.read_buffer(oauth_page_str.c_str());
 	XMLNode *oauth_page = doc.root();
 	if (!oauth_page) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "oauth_page page has no doc.root!\n");
+		report_login_error ("oauth_page page has no doc.root!");
 		return false;
 	}
 	if (strcasecmp (doc.root()->name().c_str(), "html")) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "root is not <html>\n");
+		report_login_error ("root is not <html>");
 		return false;
 	}
 
@@ -373,12 +381,12 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	}
 
 	if (csrf_mwt =="") {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "csrfmiddlewaretoken not found\n");
+		report_login_error ("csrfmiddlewaretoken not found");
 		return false;
 	}
 
 	if (next_page =="") {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "next page not found\n");
+		report_login_error ("next page not found");
 		return false;
 	}
 
@@ -404,12 +412,12 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 
 	res = curl_easy_perform (curl);
 	if (res != CURLE_OK) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, string_compose("curl failed: %1, error=%2\n", oauth_url, res));
+		report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
 		return false;
 	}
 
 	if (!xml_page.memory) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "curl returned nothing!\n");
+		report_login_error (string_compose ("curl returned nothing, url=%1!", oauth_url));
 		return false;
 	}
 
@@ -421,12 +429,12 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	DEBUG_TRACE(PBD::DEBUG::Freesound, oauth_page_str);
 #if FREESOUND_EVER_SENDS_VALID_XML
 	if (!doc.read_buffer (oauth_page_str.c_str())) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "doc.read_buffer() returns false\n");
+		report_login_error ("doc.read_buffer() returns false");
 		return false;
 	}
 	XMLNode *authorize_page = doc.root();
 	if (!authorize_page) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "authorize page has no doc.root!\n");
+		report_login_error ("authorize page has no doc.root!");
 		return false;
 	}
 
@@ -459,7 +467,7 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 		}
 	}
 	if (!found_auth_button) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "'authorize' button not found\n");
+		report_login_error ("'authorize' button not found");
 		return false;
 	}
 
@@ -477,12 +485,12 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 
 	res = curl_easy_perform (curl);
 	if (res != CURLE_OK) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, string_compose("curl failed: %1, error=%2\n", oauth_url, res));
+		report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
 		return false;
 	}
 
 	if (!xml_page.memory) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "curl returned nothing!\n");
+		report_login_error (string_compose ("curl returned nothing, url=%1!", oauth_url));
 		return false;
 	}
 
@@ -496,12 +504,12 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 #if FREESOUND_EVER_SENDS_VALID_XML
 
 	if (!doc.read_buffer (oauth_page_str.c_str())) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "doc.read_buffer() of token page returns false\n");
+		report_login_error ("doc.read_buffer() of token page returns false");
 		return false;
 	}
 	XMLNode *auth_granted_page = doc.root();
 	if (!auth_granted_page) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "auth_granted_page has no doc.root!\n");
+		report_login_error ("auth_granted_page has no doc.root!");
 		return false;
 	}
 
@@ -562,7 +570,7 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 #endif
 
 	if (auth_code == "") { 
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "Failed to get authorization code!\n");
+		report_login_error ("Failed to get authorization code!");
 		return false;
 	}
 
@@ -579,12 +587,12 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 
 	res = curl_easy_perform (curl);
 	if (res != CURLE_OK) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, string_compose("curl failed: %1, error=%2\n", oauth_url, res));
+		report_login_error (string_compose ("curl failed: %1, error=%2", oauth_url, res));
 		return false;
 	}
 
 	if (!xml_page.memory) {
-		DEBUG_TRACE(PBD::DEBUG::Freesound, "curl returned nothing!\n");
+		report_login_error (string_compose ("curl returned nothing, url=%1!", oauth_url));
 		return false;
 	}
 

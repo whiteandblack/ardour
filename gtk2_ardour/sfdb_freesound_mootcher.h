@@ -112,6 +112,7 @@ private:
 
 	void updateProgress(double dlnow, double dltotal);
 	void doneWithMootcher();
+	void report_login_error(const std::string &msg);
 
 	Gtk::HBox progress_hbox;
 	Gtk::ProgressBar progress_bar;
