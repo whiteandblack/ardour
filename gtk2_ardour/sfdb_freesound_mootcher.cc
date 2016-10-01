@@ -305,7 +305,7 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 
 	CURLcode res;
 	XMLTree doc;
-	struct MemoryStruct xml_page;
+	struct SfdbMemoryStruct xml_page;
 	xml_page.memory = NULL;
 	xml_page.size = 0;
 
