@@ -263,15 +263,15 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	 * the hidden form field valus that we'll need at the next step.
 	 *
 	 * Then, we must POST this page with the user's Freesound username and password, also
-	 * passing along the values of 'csrfmiddlewaretoken' and 'next' that were passed to us in
-	 * hidden form fields. 'next' is the address of the next page that will be returned, which
-	 * will be that of a page with an 'authorize' button on.
+	 * passing along the values of "csrfmiddlewaretoken" and "next" that were passed to us in
+	 * hidden form fields. "next" is the address of the next page that will be returned, which
+	 * will be that of a page with an "authorize" button on.
 	 *
 	 * We must next POST this page (with the same csrfmiddlewaretoken value), and the name and
-	 * value of the 'authorize' button. Ideally, we'd parse out the <input ...> field of the
-	 * 'Authorize!' button and POST the value therein; unfortunately the page isn't valid
+	 * value of the "authorize" button. Ideally, we'd parse out the <input ...> field of the
+	 * "Authorize!" button and POST the value therein; unfortunately the page isn't valid
 	 * XHTML, so we can't use XMLTree on it. For now, I don't even attempt to parse the page:
-	 * I've assumed that the button is always named 'authorize', with a value of 'Authorize!'.
+	 * I've assumed that the button is always named "authorize", with a value of "Authorize!".
 	 *
 	 * The returned page then contains an authorization code, which we have to exchange for a token,
 	 * by POSTing to https://www.freesound.org/apiv2/oauth2/access_token/. This page expects
@@ -285,7 +285,7 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	 * all the other JSON pages on freesound.org) ignores the "&format=xml" parameter.
 	 *
 	 * The hard-won token then needs to be presented back to freesound.org as part of an
-	 * 'Authorization: Bearer " HTML header on all subsequent requests that require OAuth.
+	 * "Authorization: Bearer " HTML header on all subsequent requests that require OAuth.
 	 *
 	 * This function, as you might expect from the foregoing description, is rather fragile
 	 * in the face of any changes in the HTML that's served by freesound.org. Unfortunately, I
@@ -873,7 +873,7 @@ Mootcher::fetchAudioFile(std::string originalFileName, std::string theID, std::s
 		// oauth() has set a bunch of curl options - reset the important ones now
 		curl_easy_setopt(curl, CURLOPT_POST, 0);
 
-		// We don't need to set the 'Authorization:' header here because the instance of
+		// We don't need to set the "Authorization:" header here because the instance of
 		// curl in this mootcher is still logged in. Subsequently created mootchers with
 		// the token passed into their constructors will have the header set there.
 	}
