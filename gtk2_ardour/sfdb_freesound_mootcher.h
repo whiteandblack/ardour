@@ -95,7 +95,7 @@ public:
 private:
 	void ensureWorkingDir ();
 
-	bool            oauth(const std::string &username, const std::string &password);
+	bool get_oauth_token();
 
 	std::string doRequest(std::string uri, std::string params);
 	void setcUrlOptions();

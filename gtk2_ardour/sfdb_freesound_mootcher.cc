@@ -58,9 +58,11 @@
 #include "ardour/filesystem_paths.h"
 #include "ardour/rc_configuration.h"
 #include "pbd/pthread_utils.h"
+#include "pbd/openuri.h"
 
 #include "ardour_dialog.h"
 #include "gui_thread.h"
+#include "widgets/prompter.h"
 
 using namespace PBD;
 
@@ -249,7 +251,7 @@ Mootcher::report_login_error(const std::string &msg)
 
 
 bool
-Mootcher::oauth(const std::string &username, const std::string &password)
+Mootcher::get_oauth_token()
 {
 	/*
 	 * Logging into Freesound requires us to jump through a few hoops.
@@ -278,7 +280,7 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	 * POST parameters of client_id, client_secret, grant_type=authorization_code, & &code (= our authorization code)
 	 *
 	 * Again, this page isn't valid XML: for this one I've hacked up a parser that just looks
-	 * for a <div> containing a 40digit hex number, which is what it presently returns.
+	 * for a <div> containing a 30character base64-ish string, which is what it presently returns.
 	 *
 	 * The returned page from this POST contains the token value which we should use for subsequent
 	 * download requests, but (ha ha) this page is actually JSON, because the previous page (unlike
@@ -300,21 +302,65 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 	 *     - embed a mini-browser into Ardour, and use that to show the Freesound login and token pages.
 	 *     - try to persuade Freesound to change their API, or at least send valid XHTML.
 	 *     - dropping support for direct freesound import into Ardour altogether.
-	 *     
+	 *     - opening a link to the freesound.org authentication page in the user's browser,
+	 *       for them to log in, and copy-&-paste the authorization code from there into Ardour.
+	 *
 	 */
 
 	CURLcode res;
-	XMLTree doc;
 	struct SfdbMemoryStruct xml_page;
 	xml_page.memory = NULL;
 	xml_page.size = 0;
 
-	DEBUG_TRACE(PBD::DEBUG::Freesound, "oauth(" + username + ",*****)\n");
+	std::string oauth_url = "https://www.freesound.org/apiv2/oauth2/logout_and_authorize/?client_id="+client_id+"&response_type=code&state=hello";
+
+#if !OAUTH_BUILTIN_HACK
+
+	std::string auth_code = "";
+
+	PBD::open_uri (oauth_url);
+	ArdourWidgets::Prompter token_entry(true);
+	token_entry.set_prompt(_("Paste Freesound authorization code"));
+	token_entry.set_title(_("Authorization Code"));
+
+	token_entry.set_name ("TokenEntryWindow");
+	// token_entry.set_size_request (250, -1);
+	token_entry.set_position (Gtk::WIN_POS_MOUSE);
+	token_entry.add_button (Gtk::Stock::OK, Gtk::RESPONSE_ACCEPT);
+	token_entry.show ();
+
+	if (token_entry.run () != Gtk::RESPONSE_ACCEPT)
+		return false;
+
+	token_entry.get_result(auth_code);
+	if (auth_code == "")
+		return false;
+	//XXX any other checks required/possible?
+
+	// We don't need to set the "Authorization:" header here because the instance of
+	// curl in this mootcher is still logged in. Subsequently created mootchers with
+	// the token passed into their constructors will have the header set there.
+
 	setcUrlOptions();
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &xml_page);
 
-	std::string oauth_url = "https://www.freesound.org/apiv2/oauth2/logout_and_authorize/?client_id="+client_id+"&response_type=code&state=hello";
+#else
+	XMLTree doc;
+	std::string &username, &password;
+
+	CredentialsDialog freesound_credentials(_("Enter Freesound user name & password"));
+	int r = freesound_credentials.run();
+	freesound_credentials.hide();
+	if (r != Gtk::RESPONSE_ACCEPT) {
+		return false
+	}
+	while (gtk_events_pending()) {
+		// allow the dialogue to become hidden
+		gtk_main_iteration ();
+	}
+
+	DEBUG_TRACE(PBD::DEBUG::Freesound, "get_oauth_token(" + username + ",*****)\n");
 	std::string cookie_file = Glib::build_filename (ARDOUR::user_config_directory(), "freesound-cookies");
 	std::string oauth_page_str;
 
@@ -539,7 +585,6 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 #else
 	// hackily parse through the HTML looking for a <div> tag with 40-character hex contents
 	size_t p = 0;
-	std::string auth_code = "";
 
 	while (true) {
 		DEBUG_TRACE(PBD::DEBUG::Freesound, string_compose("searching for \"<div \" from %1\n", p));
@@ -578,6 +623,8 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 		return false;
 	}
 
+#endif
+
 	curl_easy_setopt(curl, CURLOPT_URL, "https://www.freesound.org/apiv2/oauth2/access_token/");
 	curl_easy_setopt(curl, CURLOPT_POST, 5);
 	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, 
@@ -602,16 +649,19 @@ Mootcher::oauth(const std::string &username, const std::string &password)
 		return false;
 	}
 
-	oauth_page_str = xml_page.memory;
+	std::string access_token_json_str = xml_page.memory;
 	free (xml_page.memory);
 	xml_page.memory = NULL;
 	xml_page.size = 0;
 
-	DEBUG_TRACE(PBD::DEBUG::Freesound, oauth_page_str);
+	DEBUG_TRACE(PBD::DEBUG::Freesound, access_token_json_str);
 
-	// one of these days ardour's gonna need a proper JSON parser, but not now...
-	p = oauth_page_str.find ("access_token");
-	oauth_token = oauth_page_str.substr (p + 16, 40);
+	// one of these days ardour's gonna need a proper JSON parser...
+	size_t token_pos = access_token_json_str.find ("access_token");
+	oauth_token = access_token_json_str.substr (token_pos + 16, 30);
+
+	// we've set a bunch of curl options - reset the important ones now
+	curl_easy_setopt(curl, CURLOPT_POST, 0);
 
 	DEBUG_TRACE(PBD::DEBUG::Freesound, "oauth_token is :" + oauth_token + "\n");
 	return true;
@@ -853,29 +903,9 @@ Mootcher::fetchAudioFile(std::string originalFileName, std::string theID, std::s
 	curl_easy_setopt (curl, CURLOPT_PROGRESSDATA, this);
 
 	if (oauth_token == "") {
-		CredentialsDialog freesound_credentials(_("Enter Freesound user name & password"));
-		int r = freesound_credentials.run();
-		freesound_credentials.hide();
-		if (r != Gtk::RESPONSE_ACCEPT) {
+		if (!get_oauth_token()) {
 			return "";
 		}
-		while (gtk_events_pending()) {
-			// allow the dialogue to become hidden
-			gtk_main_iteration ();
-		}
-
-		progress_hbox.show();
-		if (!oauth (freesound_credentials.username(), freesound_credentials.password())) {
-			progress_hbox.hide();
-			return "";
-		}
-
-		// oauth() has set a bunch of curl options - reset the important ones now
-		curl_easy_setopt(curl, CURLOPT_POST, 0);
-
-		// We don't need to set the "Authorization:" header here because the instance of
-		// curl in this mootcher is still logged in. Subsequently created mootchers with
-		// the token passed into their constructors will have the header set there.
 	}
 
 	// now download the actual file
