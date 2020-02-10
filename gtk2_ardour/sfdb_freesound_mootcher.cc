@@ -39,6 +39,8 @@
 
 
 *************************************************************************************/
+
+// #define OAUTH_BUILTIN_HACK 1
 #include "sfdb_freesound_mootcher.h"
 
 #include "pbd/xml++.h"
@@ -242,13 +244,53 @@ std::string Mootcher::searchSimilar(std::string id)
 
 //------------------------------------------------------------------------
 
+#if OAUTH_BUILTIN_HACK
+class CredentialsDialog : public ArdourDialog
+{
+
+	public:
+		CredentialsDialog(const std::string &title);
+		const std::string username() { return username_entry.get_text(); }
+		const std::string password() { return password_entry.get_text(); }
+	private:
+		Gtk::Label username_label;
+		Gtk::Entry username_entry;
+		Gtk::Label password_label;
+		Gtk::Entry password_entry;
+};
+
+CredentialsDialog::CredentialsDialog(const std::string &title)
+	: ArdourDialog (title, true)
+	, username_label (_("User name:"))
+	, password_label (_("Password:"))
+{
+	password_entry.set_visibility (false);
+	get_vbox ()->pack_start (username_label);
+	get_vbox ()->pack_start (username_entry);
+	get_vbox ()->pack_start (password_label);
+	get_vbox ()->pack_start (password_entry);
+
+	username_label.set_alignment (Gtk::ALIGN_LEFT);
+	password_label.set_alignment (Gtk::ALIGN_LEFT);
+
+	username_entry.set_activates_default (true);
+	password_entry.set_activates_default (true);
+
+	add_button (Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
+	add_button (Gtk::Stock::OK,     Gtk::RESPONSE_ACCEPT);
+	set_default_response (Gtk::RESPONSE_ACCEPT);
+
+	show_all ();
+
+}
+#endif
+
 void
 Mootcher::report_login_error(const std::string &msg)
 {
 	DEBUG_TRACE(PBD::DEBUG::Freesound, "Login failed:" + msg + "\n");
 	error << "Freesound login failed: " << msg << endmsg;
 }
-
 
 bool
 Mootcher::get_oauth_token()
@@ -311,12 +353,16 @@ Mootcher::get_oauth_token()
 	struct SfdbMemoryStruct xml_page;
 	xml_page.memory = NULL;
 	xml_page.size = 0;
+	std::string auth_code = "";
 
 	std::string oauth_url = "https://www.freesound.org/apiv2/oauth2/logout_and_authorize/?client_id="+client_id+"&response_type=code&state=hello";
 
+	setcUrlOptions();
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &xml_page);
+
 #if !OAUTH_BUILTIN_HACK
 
-	std::string auth_code = "";
 
 	PBD::open_uri (oauth_url);
 	ArdourWidgets::Prompter token_entry(true);
@@ -335,30 +381,29 @@ Mootcher::get_oauth_token()
 	token_entry.get_result(auth_code);
 	if (auth_code == "")
 		return false;
+
 	//XXX any other checks required/possible?
 
 	// We don't need to set the "Authorization:" header here because the instance of
 	// curl in this mootcher is still logged in. Subsequently created mootchers with
 	// the token passed into their constructors will have the header set there.
 
-	setcUrlOptions();
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &xml_page);
-
 #else
 	XMLTree doc;
-	std::string &username, &password;
 
 	CredentialsDialog freesound_credentials(_("Enter Freesound user name & password"));
 	int r = freesound_credentials.run();
 	freesound_credentials.hide();
 	if (r != Gtk::RESPONSE_ACCEPT) {
-		return false
+		return false;
 	}
 	while (gtk_events_pending()) {
 		// allow the dialogue to become hidden
 		gtk_main_iteration ();
 	}
+
+	std::string username = freesound_credentials.username();
+	std::string password = freesound_credentials.password();
 
 	DEBUG_TRACE(PBD::DEBUG::Freesound, "get_oauth_token(" + username + ",*****)\n");
 	std::string cookie_file = Glib::build_filename (ARDOUR::user_config_directory(), "freesound-cookies");
@@ -391,6 +436,22 @@ Mootcher::get_oauth_token()
 	free (xml_page.memory);
 	xml_page.memory = NULL;
 	xml_page.size = 0;
+
+	//XXX transform to XHTML
+	size_t ap = oauth_page_str.find("<body>");
+	if (ap == std::string::npos) {
+		report_login_error ("no <body> found in login page");
+		return false;
+	}
+	while ((ap = oauth_page_str.find(" autofocus ", ap)) != std::string::npos) {
+		oauth_page_str.insert(ap+10, "=\"autofocus\"");
+		ap += 22;
+	}
+	ap = oauth_page_str.find("<body>");
+	while ((ap = oauth_page_str.find(" required ", ap)) != std::string::npos) {
+		oauth_page_str.insert(ap+9, "=\"required\"");
+		ap += 20;
+	}
 
 	DEBUG_TRACE(PBD::DEBUG::Freesound, oauth_page_str);
 	doc.read_buffer(oauth_page_str.c_str());
@@ -844,44 +905,6 @@ bool Mootcher::checkAudioFile(std::string originalFileName, std::string theID)
 	return false;
 }
 
-class CredentialsDialog : public ArdourDialog
-{
-
-	public:
-		CredentialsDialog(const std::string &title);
-		const std::string username() { return username_entry.get_text(); }
-		const std::string password() { return password_entry.get_text(); }
-	private:
-		Gtk::Label username_label;
-		Gtk::Entry username_entry;
-		Gtk::Label password_label;
-		Gtk::Entry password_entry;
-};
-
-CredentialsDialog::CredentialsDialog(const std::string &title)
-	: ArdourDialog (title, true)
-	, username_label (_("User name:"))
-	, password_label (_("Password:"))
-{
-	password_entry.set_visibility (false);
-	get_vbox ()->pack_start (username_label);
-	get_vbox ()->pack_start (username_entry);
-	get_vbox ()->pack_start (password_label);
-	get_vbox ()->pack_start (password_entry);
-
-	username_label.set_alignment (Gtk::ALIGN_LEFT);
-	password_label.set_alignment (Gtk::ALIGN_LEFT);
-
-	username_entry.set_activates_default (true);
-	password_entry.set_activates_default (true);
-
-	add_button (Gtk::Stock::CANCEL, Gtk::RESPONSE_CANCEL);
-	add_button (Gtk::Stock::OK,     Gtk::RESPONSE_ACCEPT);
-	set_default_response (Gtk::RESPONSE_ACCEPT);
-
-	show_all ();
-
-}
 
 const std::string
 Mootcher::fetchAudioFile(std::string originalFileName, std::string theID, std::string audioURL, SoundFileBrowser *caller)
