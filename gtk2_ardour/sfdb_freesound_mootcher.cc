@@ -551,6 +551,9 @@ Mootcher::get_oauth_token()
 
 	DEBUG_TRACE(PBD::DEBUG::Freesound, oauth_page_str);
 
+	static const char *base64ish = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	static const int base64len = 30;
+
 #if FREESOUND_EVER_SENDS_VALID_XML
 
 	if (!doc.read_buffer (oauth_page_str.c_str())) {
@@ -574,8 +577,8 @@ Mootcher::get_oauth_token()
 		XMLProperty *prop_style = (*i)->property("style");
 		const std::string content = (*i)->content();
 
-		if (prop_style && content.length() == 40) {
-			size_t p = content.find_first_not_of("0123456789abcdefABCDEF");
+		if (prop_style && content.length() == base64len) {
+			size_t p = content.find_first_not_of(base64ish);
 			if (p == std::string::npos) {
 				oauth_token = content;
 				return true;
@@ -583,7 +586,7 @@ Mootcher::get_oauth_token()
 		}
 	}
 #else
-	// hackily parse through the HTML looking for a <div> tag with 40-character hex contents
+	// hackily parse through the HTML looking for a <div> tag with base64len-character base64-ish contents
 	size_t p = 0;
 
 	while (true) {
@@ -604,12 +607,12 @@ Mootcher::get_oauth_token()
 		}
 		p = q + 1;
 		DEBUG_TRACE(PBD::DEBUG::Freesound, string_compose("checking content length: %1 - %2 = %3\n", r, q, r - q));
-		if (r - q != 41) {
+		if (r - q != base64len + 1) {
 			continue;
 		}
-		std::string content = oauth_page_str.substr(q + 1, 40);
-		DEBUG_TRACE(PBD::DEBUG::Freesound, string_compose("checking content is hex: %1\n", content));
-		if (content.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
+		std::string content = oauth_page_str.substr(q + 1, base64len);
+		DEBUG_TRACE(PBD::DEBUG::Freesound, string_compose("checking content is base64ish: %1\n", content));
+		if (content.find_first_not_of(base64ish) != std::string::npos) {
 			continue;
 		}
 		DEBUG_TRACE(PBD::DEBUG::Freesound, "Got authorization code!\n");
