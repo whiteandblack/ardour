@@ -210,7 +210,7 @@ std::string Mootcher::doRequest(std::string uri, std::string params)
 	if( res != 0 ) {
 		std::string errmsg = string_compose (_("curl error %1 (%2)"), res, curl_easy_strerror(res));
 		error << errmsg << endmsg;
-		DEBUG_TRACE(PBD::DEBUG::Freesound, errmsg + "\n"); 
+		DEBUG_TRACE(PBD::DEBUG::Freesound, errmsg + "\n");
 		return "";
 	}
 
@@ -404,7 +404,7 @@ Mootcher::get_oauth_token()
 		return false;
 	}
 
-	// find all input fields with both name and value properties (there should be at least two of them, for 
+	// find all input fields with both name and value properties (there should be at least two of them, for
 	// csrfmiddlewaretoken and next page).
 	boost::shared_ptr<XMLSharedNodeList> inputs = doc.find("//input[@name and @value]", oauth_page);
 	DEBUG_TRACE(PBD::DEBUG::Freesound, string_compose("found %1 input nodes\n", inputs->size()));
@@ -621,7 +621,7 @@ Mootcher::get_oauth_token()
 	}
 #endif
 
-	if (auth_code == "") { 
+	if (auth_code == "") {
 		report_login_error ("Failed to get authorization code!");
 		return false;
 	}
@@ -630,9 +630,9 @@ Mootcher::get_oauth_token()
 
 	curl_easy_setopt(curl, CURLOPT_URL, "https://www.freesound.org/apiv2/oauth2/access_token/");
 	curl_easy_setopt(curl, CURLOPT_POST, 5);
-	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, 
-			("client_id=" + client_id + 
-			"&client_secret=" + default_token + 
+	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS,
+			("client_id=" + client_id +
+			"&client_secret=" + default_token +
 			"&grant_type=authorization_code" +
 			"&code=" + auth_code).c_str());
 
