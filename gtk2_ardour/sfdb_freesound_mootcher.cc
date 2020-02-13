@@ -68,7 +68,7 @@
 
 using namespace PBD;
 
-static const std::string base_url = "http://www.freesound.org/apiv2";
+static const std::string base_url = "https://www.freesound.org/apiv2";
 
 // Ardour 4
 static const std::string default_token = "b2cc51878bd4fde055e3e84591eb289715d01503";
@@ -355,7 +355,7 @@ Mootcher::get_oauth_token()
 	xml_page.size = 0;
 	std::string auth_code = "";
 
-	std::string oauth_url = "https://www.freesound.org/apiv2/oauth2/logout_and_authorize/?client_id="+client_id+"&response_type=code&state=hello";
+	std::string oauth_url = base_url + "/oauth2/logout_and_authorize/?client_id="+client_id+"&response_type=code&state=hello";
 
 	setcUrlOptions();
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
@@ -689,7 +689,7 @@ Mootcher::get_oauth_token()
 
 #endif
 
-	curl_easy_setopt(curl, CURLOPT_URL, "https://www.freesound.org/apiv2/oauth2/access_token/");
+	curl_easy_setopt(curl, CURLOPT_URL, (base_url + "/oauth2/access_token/").c_str());
 	curl_easy_setopt(curl, CURLOPT_POST, 5);
 	curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS,
 			("client_id=" + client_id +
