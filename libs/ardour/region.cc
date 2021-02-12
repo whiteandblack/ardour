@@ -1892,6 +1892,19 @@ Region::merge_features (AnalysisFeatureList& result, const AnalysisFeatureList& 
 }
 
 void
+Region::xruns (XrunPositions& xruns) const
+{
+	for (SourceList::const_iterator i = _sources.begin (); i != _sources.end(); ++i) {
+		XrunPositions const& x = (*i)->xruns ();
+		for (XrunPositions::const_iterator p = x.begin (); p != x.end (); ++p) {
+			if (*p >= _start && *p < _start + _length) {
+				xruns.push_back (*p - _start);
+			}
+		}
+	}
+}
+
+void
 Region::drop_sources ()
 {
 	for (SourceList::const_iterator i = _sources.begin (); i != _sources.end(); ++i) {

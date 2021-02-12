@@ -337,6 +337,8 @@ public:
 	 */
 	void transients (AnalysisFeatureList&);
 
+	void xruns (XrunPositions&) const;
+
 	/** merges _onsets OR _transients with _user_transients into given list
 	 * if _onsets and _transients are unset, run analysis.
 	 * list is not thinned, duplicates remain in place.

@@ -127,6 +127,8 @@ Source::get_state ()
 		node->set_property ("natural-position", _natural_position);
 	}
 
+	// TODO save _xruns
+
 	return *node;
 }
 
@@ -166,6 +168,8 @@ Source::set_state (const XMLNode& node, int version)
 	if (!node.get_property (X_("flags"), _flags)) {
 		_flags = Flag (0);
 	}
+
+	// TODO load _xruns
 
 	/* Destructive is no longer valid */
 
